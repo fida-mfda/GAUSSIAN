@@ -1,87 +1,329 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template_string, request, send_file, redirect, url_for
 import os
 import cv2
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# Folder configurations
-UPLOAD_FOLDER = 'static/images/uploaded'
-RESULT_FOLDER = 'static/images/results'
-VIDEO_FOLDER = 'static/videos'
+UPLOAD_FOLDER = 'images/uploaded'
+RESULT_FOLDER = 'static/results'  # Simpan gambar hasil di folder static/results
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULT_FOLDER'] = RESULT_FOLDER
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
-# Ensure folders exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(RESULT_FOLDER, exist_ok=True)
-os.makedirs(VIDEO_FOLDER, exist_ok=True)
-
+# Fungsi untuk memeriksa file yang diizinkan
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-# Homepage route
+# Route untuk homepage
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template_string('''  
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Homepage</title>
+        <style>
+            body {
+                font-family: 'Poppins', sans-serif;
+                color: #ffffff;
+                margin: 0;
+                padding: 0;
+                overflow-x: hidden; /* Disable horizontal scrolling */
+            }
+            video {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                z-index: -1;
+            }
+            h1 {
+                font-size: 4em;
+                font-weight: bold;
+                text-shadow: 3px 3px 10px #ff0000;
+                margin: 20px 0;
+                text-align: center;
+                animation: popOut 1s ease forwards;
+                transform: scale(0);
+            }
+            @keyframes popOut {
+                0% {
+                    transform: scale(0);
+                    opacity: 0;
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+            button {
+                background: linear-gradient(90deg, #ff0000, #ffffff);
+                color: #000000;
+                border: none;
+                padding: 15px 30px;
+                margin-top: 20px;
+                cursor: pointer;
+                font-size: 18px;
+                font-weight: bold;
+                text-transform: uppercase;
+                border-radius: 50px;
+                box-shadow: 0px 4px 15px rgba(255, 0, 0, 0.5);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            button:hover {
+                transform: scale(1.1);
+                box-shadow: 0px 6px 20px rgba(255, 0, 0, 0.8);
+            }
+            a {
+                text-decoration: none;
+            }
+            .section {
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                text-align: center;
+                opacity: 0;
+                transform: translateY(50px);
+                transition: opacity 1s ease, transform 1s ease;
+            }
+            .section.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .about-us {
+                margin-top: 50px;
+                padding: 20px;
+                background: #000000; /* Warna background hitam */
+                border-radius: 15px;
+                box-shadow: 0px 4px 15px rgba(255, 255, 255, 0.2);
+                transform: translateY(100px); /* Mulai di bawah */
+                transition: transform 1s ease, opacity 1s ease;
+                opacity: 0; /* Mulai tidak terlihat */
+            }
+            .about-us.visible {
+                transform: translateY(0); /* Geser ke atas */
+                opacity: 1; /* Muncul */
+            }
+            p {
+                font-size: 1.2em;
+                line-height: 1.8;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Video sebagai background -->
+        <video autoplay loop muted>
+            <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
 
-# Upload and process route
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+        <!-- Section Welcome -->
+        <div class="section">
+            <h1>Welcome To Our Website</h1>
+            <a href="/gaussian-blur-tool">
+                <button>Gaussian Blur Tool</button>
+            </a>
+        </div>
 
-    file = request.files['file']
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        return jsonify({'filename': filename, 'filepath': filepath}), 200
-    return jsonify({'error': 'Invalid file type'}), 400
+        <!-- Section About Us -->
+        <div class="section">
+            <div class="about-us">
+                <h1>About Us</h1>
+                <p>
+                    Welcome to our website! Our mission is to provide innovative and user-friendly tools for everyone.
+                    This platform combines functionality and creativity, offering features like image processing
+                    and interactive tools for everyday needs.
+                </p>
+                <p>
+                    We are a passionate team of developers dedicated to making technology accessible and engaging for everyone.
+                    Stay tuned as we continue to improve and add more features!
+                </p>
+            </div>
+        </div>
 
-@app.route('/process', methods=['POST'])
-def process_image():
-    data = request.get_json()
-    filename = data.get('filename')
-    filter_type = data.get('filter_type', 'median_blur')
-    level = int(data.get('level', 5))
-    rotation = int(data.get('rotation', 0))
+        <script>
+            // JavaScript untuk animasi pop-in
+            const sections = document.querySelectorAll('.section, .about-us');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.5 });
 
+            sections.forEach(section => observer.observe(section));
+        </script>
+    </body>
+    </html>
+    ''')
+
+
+
+# Route untuk Gaussian Blur Tool
+@app.route('/gaussian-blur-tool', methods=['GET', 'POST'])
+def gaussian_blur_tool():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return redirect(request.url)
+        file = request.files['file']
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            filter_type = request.form.get('filter_type')
+            level = int(request.form.get('level', 5))  # Default level adalah 5 jika tidak diisi
+            if not (1 <= level <= 50):  # Validasi level
+                level = 5
+            return redirect(url_for('process_image', filename=filename, filter_type=filter_type, level=level))
+
+    return render_template_string('''  
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gaussian Blur Tool</title>
+        <style>
+            body {
+                font-family: 'Poppins', sans-serif;
+                background-color: #000000;
+                background-image: radial-gradient(circle, #800000, #550000);
+                color: white;
+                text-align: center;
+                margin: 0;
+                padding: 0;
+            }
+            h1 {
+                font-size: 2.5em;
+                margin-top: 50px;
+                text-shadow: 3px 3px 10px #ff0000;
+            }
+            form {
+                margin: 20px auto;
+                padding: 20px;
+                max-width: 600px;
+                text-align: center;
+            }
+            input[type="file"], input[type="number"], button {
+                margin: 10px;
+                padding: 15px 30px;
+                font-size: 16px;
+                font-weight: bold;
+                text-transform: uppercase;
+                border-radius: 50px;
+                border: none;
+                cursor: pointer;
+            }
+            input[type="file"], input[type="number"] {
+                color: white;
+                background: #550000;
+            }
+            button {
+                background: linear-gradient(90deg, #ff0000, #ffffff);
+                color: #000000;
+                box-shadow: 0px 4px 15px rgba(255, 0, 0, 0.5);
+            }
+            button:hover {
+                transform: scale(1.1);
+                box-shadow: 0px 6px 20px rgba(255, 0, 0, 0.8);
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Gaussian Blur Tool</h1>
+        <form action="/gaussian-blur-tool" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required>
+            <br>
+            <label for="level">Blur/Noise Level (1-50):</label>
+            <br>
+            <input type="number" name="level" id="level" min="1" max="50" required>
+            <br>
+            <button type="submit" name="filter_type" value="median_blur">Apply Median Blur</button>
+            <button type="submit" name="filter_type" value="bilateral_filter">Apply Bilateral Filter</button>
+        </form>
+    </body>
+    </html>
+    ''')
+
+# Route untuk memproses gambar dan menampilkan hasil di halaman baru
+@app.route('/process/<filename>/<filter_type>/<int:level>')
+def process_image(filename, filter_type, level):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.exists(filepath):
-        return jsonify({'error': 'File not found'}), 404
+    result_filename = 'result_' + filename
+    result_path = os.path.join(app.config['RESULT_FOLDER'], result_filename)
 
+    # Proses filter
     img = cv2.imread(filepath)
-
-    # Apply filter
     if filter_type == 'median_blur':
-        level = level if level % 2 == 1 else level + 1
+        level = level if level % 2 == 1 else level + 1  # Pastikan level adalah angka ganjil
         processed_img = cv2.medianBlur(img, level)
     elif filter_type == 'bilateral_filter':
         processed_img = cv2.bilateralFilter(img, level * 2 + 1, level * 10, level * 10)
-    else:
-        return jsonify({'error': 'Invalid filter type'}), 400
-
-    # Apply rotation
-    if rotation != 0:
-        center = (processed_img.shape[1] // 2, processed_img.shape[0] // 2)
-        M = cv2.getRotationMatrix2D(center, rotation, 1.0)
-        processed_img = cv2.warpAffine(processed_img, M, (processed_img.shape[1], processed_img.shape[0]))
-
-    # Save result
-    result_filename = 'result_' + filename
-    result_path = os.path.join(app.config['RESULT_FOLDER'], result_filename)
     cv2.imwrite(result_path, processed_img)
 
-    return jsonify({'result_filename': result_filename, 'result_path': result_path}), 200
+    return render_template_string('''  
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Processed Image</title>
+        <style>
+            body {
+                font-family: 'Poppins', sans-serif;
+                background-color: #000000;
+                background-image: radial-gradient(circle, #800000, #550000);
+                color: white;
+                text-align: center;
+            }
+            img {
+                margin: 20px;
+                max-width: 90%;
+                border: 2px solid white;
+                box-shadow: 0px 4px 15px rgba(255, 255, 255, 0.5);
+            }
+            button {
+                background: linear-gradient(90deg, #ff0000, #ffffff);
+                color: #000000;
+                padding: 15px 30px;
+                margin: 20px;
+                font-size: 16px;
+                font-weight: bold;
+                border-radius: 50px;
+                border: none;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Here for the result!</h1>
+        <img src="{{ url_for('static', filename='results/' + result_filename) }}" alt="Processed Image">
+        <br>
+        <a href="/download/{{ result_filename }}">
+            <button>Download Image</button>
+        </a>
+        <br>
+        <a href="/">Back to Homepage</a>
+    </body>
+    </html>
+    ''', result_filename=result_filename)
 
+# Route untuk mengunduh hasil
 @app.route('/download/<filename>')
 def download_file(filename):
     result_path = os.path.join(app.config['RESULT_FOLDER'], filename)
-    if os.path.exists(result_path):
-        return send_file(result_path, as_attachment=True)
-    return jsonify({'error': 'File not found'}), 404
+    return send_file(result_path, as_attachment=True)
 
 if __name__ == '__main__':
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(RESULT_FOLDER, exist_ok=True)
     app.run(debug=True)
