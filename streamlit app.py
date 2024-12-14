@@ -5,8 +5,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+# Folder untuk menyimpan file yang diunggah dan hasil
 UPLOAD_FOLDER = 'images/uploaded'
-RESULT_FOLDER = 'static/results'  # Simpan gambar hasil di folder static/results
+RESULT_FOLDER = 'static/results'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULT_FOLDER'] = RESULT_FOLDER
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
@@ -31,7 +32,7 @@ def home():
                 color: #ffffff;
                 margin: 0;
                 padding: 0;
-                overflow-x: hidden; /* Disable horizontal scrolling */
+                overflow-x: hidden;
             }
             video {
                 position: absolute;
@@ -100,16 +101,16 @@ def home():
             .about-us {
                 margin-top: 50px;
                 padding: 20px;
-                background: #000000; /* Warna background hitam */
+                background: #000000;
                 border-radius: 15px;
                 box-shadow: 0px 4px 15px rgba(255, 255, 255, 0.2);
-                transform: translateY(100px); /* Mulai di bawah */
+                transform: translateY(100px);
                 transition: transform 1s ease, opacity 1s ease;
-                opacity: 0; /* Mulai tidak terlihat */
+                opacity: 0;
             }
             .about-us.visible {
-                transform: translateY(0); /* Geser ke atas */
-                opacity: 1; /* Muncul */
+                transform: translateY(0);
+                opacity: 1;
             }
             p {
                 font-size: 1.2em;
@@ -118,13 +119,11 @@ def home():
         </style>
     </head>
     <body>
-        <!-- Video sebagai background -->
         <video autoplay loop muted>
             <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
             Your browser does not support the video tag.
         </video>
 
-        <!-- Section Welcome -->
         <div class="section">
             <h1>Welcome To Our Website</h1>
             <a href="/gaussian-blur-tool">
@@ -132,24 +131,14 @@ def home():
             </a>
         </div>
 
-        <!-- Section About Us -->
         <div class="section">
             <div class="about-us">
                 <h1>About Us</h1>
-                <p>
-                    Welcome to our website! Our mission is to provide innovative and user-friendly tools for everyone.
-                    This platform combines functionality and creativity, offering features like image processing
-                    and interactive tools for everyday needs.
-                </p>
-                <p>
-                    We are a passionate team of developers dedicated to making technology accessible and engaging for everyone.
-                    Stay tuned as we continue to improve and add more features!
-                </p>
+                <p>Welcome to our website! Our mission is to provide innovative tools for everyone.</p>
             </div>
         </div>
 
         <script>
-            // JavaScript untuk animasi pop-in
             const sections = document.querySelectorAll('.section, .about-us');
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -165,8 +154,6 @@ def home():
     </html>
     ''')
 
-
-
 # Route untuk Gaussian Blur Tool
 @app.route('/gaussian-blur-tool', methods=['GET', 'POST'])
 def gaussian_blur_tool():
@@ -180,8 +167,8 @@ def gaussian_blur_tool():
             file.save(filepath)
 
             filter_type = request.form.get('filter_type')
-            level = int(request.form.get('level', 5))  # Default level adalah 5 jika tidak diisi
-            if not (1 <= level <= 50):  # Validasi level
+            level = int(request.form.get('level', 5))
+            if not (1 <= level <= 50):
                 level = 5
             return redirect(url_for('process_image', filename=filename, filter_type=filter_type, level=level))
 
@@ -327,3 +314,4 @@ if __name__ == '__main__':
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(RESULT_FOLDER, exist_ok=True)
     app.run(debug=True)
+
