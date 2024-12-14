@@ -1,1 +1,4 @@
+Flask==2.2.5
+Werkzeug==2.2.5
+opencv-python==4.8.0.74
 
